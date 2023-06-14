@@ -40,8 +40,9 @@ if st.button("Submit"):
             index = GPTSimpleVectorIndex.from_documents(documents, service_context=service_context)
             
             response = index.query(query)
-            res_box.write (str(response))
-
-#             st.success(response)
+            for i in range(len(response)):
+                res_box.write(str(response[i]))
+            #res_box.write (str(response))
+            #st.success(response)
         except Exception as e:
             st.error(f"An error occurred: {e}")
