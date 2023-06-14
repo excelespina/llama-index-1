@@ -21,12 +21,13 @@ st.markdown(hide_st_style, unsafe_allow_html=True)
 
 # If the 'Submit' button is clicked
 if st.button("Submit"):
+    res_box = st.empty()
     if not query.strip():
         st.error(f"Please provide the search query.")
     else:
         try:
             # This example uses text-davinci-003 by default; feel free to change if desired
-            llm_predictor = LLMPredictor(llm=OpenAI(temperature=0, model_name="text-davinci-003"))
+            llm_predictor = LLMPredictor(llm=OpenAI(temperature=0, model_name="gpt-3.5-turbo", streaming=True))
 
             # Configure prompt parameters and initialise helper
             max_input_size = 4096
@@ -41,6 +42,8 @@ if st.button("Submit"):
             index = GPTSimpleVectorIndex.from_documents(documents, service_context=service_context)
             
             response = index.query(query)
-            st.success(response)
+            res_box.write (str(response))
+
+#             st.success(response)
         except Exception as e:
             st.error(f"An error occurred: {e}")
