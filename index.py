@@ -7,8 +7,17 @@ from llama_index import GPTSimpleVectorIndex, SimpleDirectoryReader, LLMPredicto
 from langchain.llms.openai import OpenAI
 
 # Define a simple Streamlit app
-st.title("Ask Llama")
+st.title("Ask XL EXP LLC")
 query = st.text_input("What would you like to ask? (source: data/paul_graham_essay.txt)", "")
+
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
 
 # If the 'Submit' button is clicked
 if st.button("Submit"):
