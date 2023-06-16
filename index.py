@@ -4,6 +4,7 @@ import os, streamlit as st
 # os.environ['OPENAI_API_KEY']= ""
 
 from llama_index import GPTSimpleVectorIndex, SimpleDirectoryReader, LLMPredictor, PromptHelper, ServiceContext
+from langchain.callbacks.base import BaseCallbackHandler
 from langchain.llms.openai import OpenAI
 
 # Define a simple Streamlit app
@@ -16,6 +17,8 @@ hide_st_style = """
             </style>
             """
 st.markdown(hide_st_style, unsafe_allow_html=True)
+
+class StreamHandler(
 
 # If the 'Submit' button is clicked
 if st.button("Submit"):
@@ -39,7 +42,7 @@ if st.button("Submit"):
             service_context = ServiceContext.from_defaults(llm_predictor=llm_predictor, prompt_helper=prompt_helper)
             index = GPTSimpleVectorIndex.from_documents(documents, service_context=service_context)
             
-            response = index.query(query, streamlit=True)
+            response = index.query(query)
             for i in range(len(response)):
                 res_box.write(str(response[i]))
             #res_box.write (str(response))
