@@ -48,7 +48,7 @@ if st.button("Submit"):
             # Load documents from the 'data' directory
             documents = SimpleDirectoryReader('data').load_data()
             service_context = ServiceContext.from_defaults(llm_predictor=llm_predictor, prompt_helper=prompt_helper)
-            index = GPTSimpleVectorIndex.from_documents(documents, service_context=service_context, streaming=True)
+            index = GPTSimpleVectorIndex.from_documents(documents, service_context=service_context)
             
             response = index.query(query)
             for text in response.response_gen:
