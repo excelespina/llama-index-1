@@ -1,2 +1,5 @@
 streamlit==1.22.0
 llama-index
+git+https://github.com/AByteCoder/st_oauth
+pymongo
+pinecone-client

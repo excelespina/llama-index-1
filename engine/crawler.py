@@ -62,7 +62,3 @@ if __name__ == '__main__':
         for i in list(f.read().split("\n")):
             if validators.url(i):
                 data.append(i)
-
-    print(data)
-    print(type(data))
-    print(len(data))

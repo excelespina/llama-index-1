@@ -1,11 +1,43 @@
+import openai, os, base64, json
+import streamlit as st
 import time, os, streamlit as st
-from st_oauth import st_oauth
+import st_oauth
+from engine.callbacks import *
 
 # Uncomment to specify your OpenAI API key here (local testing only, not in production!), or add corresponding environment variable (recommended)
 # os.environ['OPENAI_API_KEY']= ""
 
+st.set_page_config(
+        page_title="Ask ITAVA Bot",
+        page_icon="🤖",
+        layout="centered",
+        initial_sidebar_state="collapsed"
+    )
+
+header = st.container()
+header.title("Ask ITAVA Bot")
+header.write("""<div class='fixed-header'/>""", unsafe_allow_html=True)
+
+### Custom CSS for the sticky header
+st.markdown(
+    """
+<style>
+    div[data-testid="stVerticalBlock"] div:has(div.fixed-header) {
+        position: sticky;
+        top: 2rem;
+        z-index: 999;
+    }
+    .fixed-header {
+        border-bottom: 1px solid black;
+    }
+</style>
+    """,
+    unsafe_allow_html=True
+)
+
 import html, random
-from engine.loaders import update_db_urls, gpt_engine
+from engine.loaders import update_db_urls, gpt_engine, nav_to
+
 
 hide_st_style = """
             <style>
@@ -14,14 +46,33 @@ hide_st_style = """
             </style>
             """
 st.markdown(hide_st_style, unsafe_allow_html=True)
-st.title("Ask ITAVA Bot")
-id = st_oauth("oauth", 'Login via Google')
+
+if "visibility" not in st.session_state:
+    st.session_state.visibility = "visible"
+    st.session_state.disabled = False
+    st.session_state.input_value = ""
+    st.session_state.not_answering = False
+    st.session_state.responding = False
+    st.session_state.logged_in = False
+
+if 'ST_OAUTH' not in st.session_state:
+    st_oauth.st_oauth("oauth", 'Login via Google to continue')
+else:
+    st.session_state.logged_in = True
+
+payload = decode_jwt_payload(st.session_state['ST_OAUTH']['id_token'])
+email = payload['email']
+
+### Limiting access to only certain emails
+# if email.split("@")[-1] != 'xl-exp.net':
+#     st.error('User not allowed. Check the email you signed in.', icon="🚨")
+#     st.error('Redirecting in 3 seconds...', icon="⚠")
+#     time.sleep(3)
+#     nav_to("http://localhost:8501")
+#     exit()
 
 main_questions = ['Who are you?', "What can you offer my child?"]
 rand_questions = []
-
-# curr_domain = "http://localhost:8501"
-curr_domain = "https://itava.xl-exp.net"
 
 urls = []
 import validators
@@ -33,50 +84,64 @@ with open('output.txt') as f:
 with open('recommended_questions.txt') as f:
     for i in list(f.read().split("\n")):
         rand_questions.append(i)
-    
-# Define a simple Streamlit app
 
-default_query = st.experimental_get_query_params().get("query", [""])[0]
+openai.api_key = os.environ['OPENAI_API_KEY']
+
+if "openai_model" not in st.session_state:
+    st.session_state["openai_model"] = "gpt-3.5-turbo"
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+
+prompt = st.text_input("What would like to ask?", st.session_state.input_value)
+
+if prompt:
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    # with st.chat_message("user"):
+    #     st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        full_response = ""
+        st.session_state.responding = True
+
+        index = gpt_engine()
+        for response in index.as_query_engine(streaming=True, similarity_top_k=1).query(prompt).response_gen:
+            full_response += response
+            message_placeholder.markdown(full_response + "▌")
+
+        st.session_state.responding = False
+        message_placeholder.markdown(full_response)
+
+    st.divider()
+    st.text("Consider other:")
+
+    rand_qs = rand_questions.copy()
+    random.shuffle(rand_qs)
+    rand_qs = rand_qs[:3]
+
+    count = 1
+    for text, col in zip(rand_qs, st.columns(len(rand_qs))):
+        st.session_state[f"consider_suggested_option_{count}"] = text
+        st.button(text, key=f"consider_suggested__{count}", on_click=locals()[f'consider_more_callback_{count}'], disabled=st.session_state.not_answering)
+        count += 1
+    st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+st.divider()
 
 with st.container():
-    st.markdown("""
-        <style>
-        .low-title {
-            opacity: 0.7;
-        }
-        .button_custom_main {
-            background-color: #04AA6D;
-            border-radius: 12px;
-            color: white;
-            margin: 0 auto;
-            display: inline;
-        }
-        .button_custom_opts {
-            border-radius: 12px;
-            margin: 0 auto;
-            display: inline;
-        }
-        .action_btn {
-            margin: 0 auto;
-            display: inline;
-            margin-right: 5px; 
-        }
-        .buttons {
-            margin: 0 auto;
-            display: flex;}
-        </style>
-        """, unsafe_allow_html=True)
-
-    md_builder = """<div class="row buttons">\n"""
     with st.expander("Get Some Ideas Here"):
         st.text("Get Started")
+        count = 1
         for text, col in zip(main_questions, st.columns(len(main_questions))):
-            md_builder += f'''
-                \n<a href="{curr_domain}?query={html.escape(text)}" target="_self"><button class="button_custom_main action_btn">{text}</button></a>\n
-                '''
-        md_builder += """\n</div>"""
-        st.markdown(md_builder, unsafe_allow_html=True)
-        md_builder = ""
+            st.session_state[f"main_questions_option_{count}"] = text
+            st.button(text, on_click=locals()[f'main_question_callback_{count}'], disabled=st.session_state.responding)
+            count += 1
         st.divider()
 
         st.text("Suggested:")
@@ -84,71 +149,8 @@ with st.container():
         random.shuffle(rand_qs)
         rand_qs = rand_qs[:3]
 
-        md_builder += """<div class="row buttons">\n"""
+        count = 1
         for text, col in zip(rand_qs, st.columns(len(rand_qs))):
-            md_builder += f'''
-                \n<a href="{curr_domain}?query={html.escape(text)}" target="_self"><button class="button_custom_opts action_btn">"{text}"</button></a>\n
-                '''
-        md_builder += """\n</div>"""
-        st.markdown(md_builder, unsafe_allow_html=True)
-
-query = st.text_input("What would you like to know?", default_query)
-
-# If the 'Submit' button is clicked
-# if st.button("Submit", disabled=st.session_state.submit_button_state, on_click=submit_button_status(True)) or query:
-if st.button("Submit") or query:
-    res_box = st.empty()
-    if not query.strip():
-        st.error(f"Please provide the search query.")
-    else:
-        try:
-            resp = ""
-            index = gpt_engine()
-            
-            response = index.as_query_engine(streaming=True, similarity_top_k=1).query(query)
-            # for i in range(len(response)):
-            #     res_box.write(str(response[i]))
-            for token in response.response_gen:
-                resp += token
-                res_box.markdown(resp, unsafe_allow_html=True)
-
-            st.markdown("""
-                <style>
-                .element-opt{
-                    -webkit-animation: 1s ease 0s normal forwards 1 fadein;
-                    animation: 1s ease 0s normal forwards 1 fadein;
-                }
-
-                @keyframes fadein{
-                    0% { opacity:0; }
-                    66% { opacity:0; }
-                    100% { opacity:1; }
-                }
-
-                @-webkit-keyframes fadein{
-                    0% { opacity:0; }
-                    66% { opacity:0; }
-                    100% { opacity:1; }
-                }
-                </style>
-                """, unsafe_allow_html=True)
-
-            md_builder = """<p class="element-opt">Consider more:</p>"""
-            st.divider()
-            
-            rand_qs = rand_questions.copy()
-            random.shuffle(rand_qs)
-            rand_qs = rand_qs[:3]
-
-            md_builder += """<div class="row buttons element-opt">\n"""
-            for text, col in zip(rand_qs, st.columns(len(rand_qs))):
-                md_builder += f'''
-                    \n<a href="{curr_domain}?query={html.escape(text)}" target="_self"><button class="button_custom_opts action_btn">"{text}"</button></a>\n
-                    '''
-            md_builder += """\n</div>"""
-            st.markdown(md_builder, unsafe_allow_html=True)
-
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
-else:
-    update_db_urls(urls)
+            st.session_state[f"suggested_option_{count}"] = text
+            st.button(text, on_click=locals()[f'suggested_callback_{count}'], disabled=st.session_state.not_answering)
+            count += 1

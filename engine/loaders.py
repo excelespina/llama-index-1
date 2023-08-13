@@ -1,5 +1,11 @@
 import streamlit as st
 
+def nav_to(url):
+    nav_script = """
+        <meta http-equiv="refresh" content="0; url='%s'">
+    """ % (url)
+    st.write(nav_script, unsafe_allow_html=True)
+
 @st.cache_data
 def update_db_urls(urls):
     # 
@@ -24,7 +30,7 @@ def gpt_engine(model_name="gpt-3.5-turbo"):
     from langchain.chat_models import ChatOpenAI
 
     # This example uses text-davinci-003 by default; feel free to change if desired
-    llm_predictor = LLMPredictor(llm=ChatOpenAI(temperature=0, model_name=model_name, streaming=True))
+    llm_predictor = LLMPredictor(llm=ChatOpenAI(temperature=0.23, model_name=model_name, streaming=True))
     # llm_predictor = LLMPredictor(llm=ChatOpenAI(temperature=0, model_name="gpt-4", streaming=True))
 
     # Configure prompt parameters and initialise helper
