@@ -56,20 +56,40 @@ if "visibility" not in st.session_state:
     st.session_state.logged_in = False
 
 if 'ST_OAUTH' not in st.session_state:
-    st_oauth.st_oauth("oauth", 'Login via Google to continue')
+    try:
+        redirect_uri = st.secrets['oauth']['redirect_uri']
+        st_oauth.st_oauth("oauth", 'Login via Google to continue')
+    except Exception as e:
+        print(e)
+        Secrets_OAuth = {
+            "authorization_endpoint": os.environ['authorization_endpoint'],
+            "token_endpoint": os.environ['token_endpoint'],
+            "jwks_uri": os.environ['jwks_uri'],
+            "redirect_uri": os.environ['redirect_uri'],
+            "client_id": os.environ['client_id'],
+            "client_secret": os.environ['client_secret'],
+            "scope": os.environ['scope'],
+            "audience": os.environ['audience']
+        }
+        redirect_uri = Secrets_OAuth['redirect_url']
+        st_oauth.st_oauth(Secrets_OAuth, 'Login via Google to continue')
+
+        print("No secrets found")
+
+    
 else:
     st.session_state.logged_in = True
 
 payload = decode_jwt_payload(st.session_state['ST_OAUTH']['id_token'])
 email = payload['email']
 
-### Limiting access to only certain emails
-# if email.split("@")[-1] != 'xl-exp.net':
-#     st.error('User not allowed. Check the email you signed in.', icon="🚨")
-#     st.error('Redirecting in 3 seconds...', icon="⚠")
-#     time.sleep(3)
-#     nav_to("http://localhost:8501")
-#     exit()
+## Limiting access to only certain emails
+if email.split("@")[-1] != 'xl-exp.net':
+    st.error('User not allowed. Check the email you signed in.', icon="🚨")
+    st.error('Redirecting in 3 seconds...', icon="⚠")
+    time.sleep(3)
+    nav_to(redirect_uri)
+    exit()
 
 main_questions = ['Who are you?', "What can you offer my child?"]
 rand_questions = []
