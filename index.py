@@ -71,7 +71,7 @@ if 'ST_OAUTH' not in st.session_state:
             "scope": os.environ['scope'],
             "audience": os.environ['audience']
         }
-        redirect_uri = Secrets_OAuth['redirect_url']
+        redirect_uri = Secrets_OAuth['redirect_uri']
         st_oauth.st_oauth(Secrets_OAuth, 'Login via Google to continue')
 
         print("No secrets found")
