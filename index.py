@@ -57,8 +57,9 @@ if "visibility" not in st.session_state:
 
 if 'ST_OAUTH' not in st.session_state:
     try:
+        st.secrets
+        Secrets_OAuth = st.secrets['oauth']
         redirect_uri = st.secrets['oauth']['redirect_uri']
-        st_oauth.st_oauth("oauth", 'Login via Google to continue')
     except Exception as e:
         print(e)
         Secrets_OAuth = {
@@ -72,10 +73,8 @@ if 'ST_OAUTH' not in st.session_state:
             "audience": os.environ['audience']
         }
         redirect_uri = Secrets_OAuth['redirect_uri']
-        st_oauth.st_oauth(Secrets_OAuth, 'Login via Google to continue')
 
-        print("No secrets found")
-
+    st_oauth.st_oauth(Secrets_OAuth, 'Login via Google to continue')
     
 else:
     st.session_state.logged_in = True

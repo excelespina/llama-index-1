@@ -3,3 +3,4 @@ llama-index
 git+https://github.com/AByteCoder/st_oauth
 pymongo
 pinecone-client
+PyJWKClient
